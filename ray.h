@@ -9,12 +9,18 @@ public:
     // Constructors
     ray() {}
 
-    // Construct a ray with given origin and direction
-    ray(const point3& origin, const vec3& direction) : orig(origin), dir(direction) {}
+    // Construct a ray with given origin, direction and time information
+    ray(const point3& origin, const vec3& direction) : orig(origin), dir(direction), tm(0)
+    {}
+
+    ray(const point3& origin, const vec3& direction, double time = 0.0)
+        : orig(origin), dir(direction), tm(time)
+    {}
 
     // Accessors for ray properties
     point3 origin() const { return orig; }
     vec3 direction() const { return dir; }
+    double time() const { return tm; }
 
     // Compute the point on the ray at parameter t
     point3 at(double t) const {
@@ -24,6 +30,8 @@ public:
 private:
     point3 orig; // Origin point of the ray
     vec3 dir;    // Direction vector of the ray
+    double tm;   // Time component
+
 };
 
 #endif
