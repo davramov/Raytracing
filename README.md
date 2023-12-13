@@ -1,1 +1,3 @@
-"# Raytracing Project" 
+# Raytracing Project
+
+![Raytraced Example](image.ppm)
