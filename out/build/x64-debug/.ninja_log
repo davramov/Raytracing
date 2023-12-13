@@ -1,0 +1,6 @@
+# ninja log v5
+4	17	0	clean	8c45b54705a541e8
+4	862	7242109459160044	CMakeFiles/Raytracing.dir/Raytracing.cpp.obj	7eb90ff66a46a0f
+863	1187	7242109462187829	Raytracing.exe	36d1cd9f5ce3d382
+4	720	7242111225541367	CMakeFiles/Raytracing.dir/Raytracing.cpp.obj	7eb90ff66a46a0f
+721	907	7242111227007292	Raytracing.exe	36d1cd9f5ce3d382

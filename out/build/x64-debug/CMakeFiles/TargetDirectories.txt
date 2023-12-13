@@ -1,0 +1,3 @@
+C:/Users/Administrator/source/repos/Raytracing/out/build/x64-debug/CMakeFiles/Raytracing.dir
+C:/Users/Administrator/source/repos/Raytracing/out/build/x64-debug/CMakeFiles/edit_cache.dir
+C:/Users/Administrator/source/repos/Raytracing/out/build/x64-debug/CMakeFiles/rebuild_cache.dir
