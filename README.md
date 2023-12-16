@@ -1,3 +1,3 @@
 # Raytracing Project
 
-![Raytraced Example](image.ppm)
+![Raytraced Example](image.jpg)
