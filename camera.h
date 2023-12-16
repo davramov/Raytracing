@@ -1,11 +1,13 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 #include "helper.h"
 #include "color.h"
 #include "hittable.h"
 #include "material.h"
-
 
 #include <iostream>
 
@@ -14,10 +16,11 @@ class camera {
 public:
     /* Public Camera Parameters Here */
 
-    double aspect_ratio = 1.0;  // Ratio of image width over height
-    int    image_width = 100;  // Rendered image width in pixel count
-    int    samples_per_pixel = 10;   // Count of random samples for each pixel
-    int    max_depth = 10;   // Maximum number of ray bounces into scene
+    double aspect_ratio = 1.0;     // Ratio of image width over height
+    int    image_width = 100;      // Rendered image width in pixel count
+    int    samples_per_pixel = 10; // Count of random samples for each pixel
+    int    max_depth = 10;         // Maximum number of ray bounces into scene
+    color  background;             // Scene background color
 
     double vfov = 90; // Field of view in degrees
     point3 lookfrom = point3(0, 0, -1);  // Point camera is looking from
@@ -33,6 +36,9 @@ public:
     void render(const hittable& world) {
         initialize();
 
+        unsigned char* data = new unsigned char[image_width * image_height * 3];
+        int index = 0;
+
         std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
         //#pragma omp parallel for schedule(dynamic)
         for (int j = 0; j < image_height; ++j) {
@@ -43,9 +49,19 @@ public:
                     ray r = get_ray(i, j);
                     pixel_color += ray_color(r, max_depth, world);
                 }
+
+                // Perform the write_color function steps but to save a jpg
+                static const interval intensity(0.000, 0.999);
+                data[index++] = static_cast<unsigned char> (255.999 * intensity.clamp(sqrt((pixel_color.x()) / samples_per_pixel)));
+                data[index++] = static_cast<unsigned char> (255.999 * intensity.clamp(sqrt((pixel_color.y()) / samples_per_pixel)));
+                data[index++] = static_cast<unsigned char> (255.999 * intensity.clamp(sqrt((pixel_color.z()) / samples_per_pixel)));
+
+
                 write_color(std::cout, pixel_color, samples_per_pixel);
             }
         }
+        stbi_write_jpg("image.jpg", image_width, image_height, 3, data, 100);
+        delete[] data;
 
         std::clog << "\rDone.                 \n";
     }
@@ -112,8 +128,10 @@ private:
 
         auto ray_origin = (defocus_angle <= 0) ? center : defocus_disk_sample();
         auto ray_direction = pixel_sample - ray_origin;
+        auto ray_time = random_double();
 
-        return ray(ray_origin, ray_direction);
+        return ray(ray_origin, ray_direction, ray_time);
+
     }
 
     // Generate a random point within the square surrounding a pixel at the origin.
@@ -129,7 +147,29 @@ private:
         return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
     }
 
+    /*
+    color ray_color(const ray& r, int depth, const hittable& world) const {
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0)
+            return color(0, 0, 0);
 
+        hit_record rec;
+
+        if (world.hit(r, interval(0.001, infinity), rec)) {
+            ray scattered;
+            color attenuation;
+            if (rec.mat->scatter(r, rec, attenuation, scattered))
+                return attenuation * ray_color(scattered, depth - 1, world);
+            return color(0, 0, 0);
+        }
+
+        vec3 unit_direction = unit_vector(r.direction());
+        auto a = 0.5 * (unit_direction.y() + 1.0);
+        return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+    }
+    */
+
+    
     // Compute the color of the ray in the scene.
     color ray_color(const ray& r, int depth, const hittable& world) const {
         hit_record rec;
@@ -139,23 +179,21 @@ private:
             return color(0, 0, 0);
 
         // set lower interval > 0 to avoid floating point error "shadow acne"
-        if (world.hit(r, interval(0.001, infinity), rec)) {
-            //vec3 direction = rec.normal + random_unit_vector(); // Randomly generate a vector based on Lambertian distribution
-            //return 0.5 * ray_color(ray(rec.p, direction), depth-1, world); // 10% reflectance
+// If the ray hits nothing, return the background color.
+        if (!world.hit(r, interval(0.001, infinity), rec))
+            return background;
 
-            // Ray color with scattered reflections
-            ray scattered;
-            color attenuation;
-            if (rec.mat->scatter(r, rec, attenuation, scattered))
-                return attenuation * ray_color(scattered, depth - 1, world);
-            return color(0, 0, 0);
+        ray scattered;
+        color attenuation;
+        color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
 
-        }
+        if (!rec.mat->scatter(r, rec, attenuation, scattered))
+            return color_from_emission;
 
-        vec3 unit_direction = unit_vector(r.direction());
-        auto a = 0.5 * (unit_direction.y() + 1.0);
-        return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
-    }
+        color color_from_scatter = attenuation * ray_color(scattered, depth - 1, world);
+
+        return color_from_emission + color_from_scatter;
+    } 
 };
 
 #endif

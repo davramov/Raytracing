@@ -29,6 +29,16 @@ inline double random_double() {
     return rand() / (RAND_MAX + 1.0);
 }
 
+inline double random_double(double min, double max) {
+    // Returns a random real in [min,max).
+    return min + (max - min) * random_double();
+}
+
+inline int random_int(int min, int max) {
+    // Returns a random integer in [min,max].
+    return static_cast<int>(random_double(min, max + 1));
+}
+
 // using the <random> header:
 // #include <random>  // newer random approach
 
@@ -38,15 +48,10 @@ inline double random_double() {
 //    return distribution(generator);
 //}
 
-
-inline double random_double(double min, double max) {
-    // Returns a random real in [min,max).
-    return min + (max - min) * random_double();
-}
-
 // Common Headers
 #include "interval.h"
 #include "ray.h"
 #include "vec3.h"
+#include "color.h"
 
 #endif

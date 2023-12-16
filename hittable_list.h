@@ -2,6 +2,7 @@
 #define HITTABLE_LIST_H
 
 #include "hittable.h"
+#include "aabb.h"
 
 #include <memory>
 #include <vector>
@@ -24,6 +25,7 @@ public:
     // Add a hittable object to the list.
     void add(shared_ptr<hittable> object) {
         objects.push_back(object);
+        bbox = aabb(bbox, object->bounding_box());
     }
 
     // Check if the ray intersects with any hittable object in the list.
@@ -45,6 +47,11 @@ public:
 
         return hit_anything;
     }
+    aabb bounding_box() const override { return bbox; }
+
+private:
+    aabb bbox;
+
 };
 
 #endif

@@ -4,12 +4,18 @@
 #include "helper.h"
 #include "color.h"
 #include "hittable.h"
+#include "texture.h"
+
 
 class hit_record;
 
 class material {
 public:
     virtual ~material() = default;
+
+    virtual color emitted(double u, double v, const point3& p) const {
+        return color(0, 0, 0);
+    }
 
     // Produce a scattered ray
     virtual bool scatter(
@@ -19,7 +25,8 @@ public:
 // Diffuse light scatter
 class lambertian : public material {
 public:
-    lambertian(const color& a) : albedo(a) {}
+    lambertian(const color& a) : albedo(make_shared<solid_color>(a)) {}
+    lambertian(shared_ptr<texture> a) : albedo(a) {}
 
     bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
         const override {
@@ -29,30 +36,31 @@ public:
         if (scatter_direction.near_zero())
             scatter_direction = rec.normal;
 
-        scattered = ray(rec.p, scatter_direction);
-        attenuation = albedo;
+        scattered = ray(rec.p, scatter_direction, r_in.time());
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
         return true;
     }
 
 private:
-    color albedo;
+    shared_ptr<texture> albedo;
 };
 
 // Metallic reflection
 class metal : public material {
 public:
-    metal(const color& a, double f) : albedo(a), fuzz(f < 1 ? f : 1) {}
+    metal(const color& a, double f) : albedo(make_shared<solid_color>(a)), fuzz(f < 1 ? f : 1) {}
+    metal(shared_ptr<texture> a, double f) : albedo(a), fuzz(f < 1 ? f : 1) {}
 
     bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
         const override {
-            vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-            scattered = ray(rec.p, reflected + fuzz * random_unit_vector());
-            attenuation = albedo;
-            return (dot(scattered.direction(), rec.normal) > 0);
+        vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
+        scattered = ray(rec.p, reflected + fuzz * random_in_unit_sphere(), r_in.time());
+        attenuation = albedo->value(rec.u, rec.v, rec.p);
+        return (dot(scattered.direction(), rec.normal) > 0);
     }
 
 private:
-    color albedo;
+    shared_ptr<texture> albedo;
     double fuzz;
 };
 
@@ -82,7 +90,8 @@ public:
             else 
                 direction = refract(unit_direction, rec.normal, refraction_ratio);
 
-            scattered = ray(rec.p, direction);            return true;
+            scattered = ray(rec.p, direction, r_in.time());
+            return true;
     }
 
 private:
@@ -96,6 +105,23 @@ private:
     }
 };
 
+class diffuse_light : public material {
+public:
+    diffuse_light(shared_ptr<texture> a) : emit(a) {}
+    diffuse_light(color c) : emit(make_shared<solid_color>(c)) {}
+
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+        const override {
+        return false;
+    }
+
+    color emitted(double u, double v, const point3& p) const override {
+        return emit->value(u, v, p);
+    }
+
+private:
+    shared_ptr<texture> emit;
+};
 
 
 #endif
